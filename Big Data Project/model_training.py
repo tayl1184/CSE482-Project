@@ -32,8 +32,6 @@ from sklearn import linear_model
 from sklearn import neural_network
 
 
-
-
 best_test_accuracies = []
 for i, news_outlet in enumerate(sentiment_data):
     Y = pd.Series(news_outlet['sentiment'].values)
@@ -47,10 +45,12 @@ for i, news_outlet in enumerate(sentiment_data):
     maxdepths = [1,2,3,4,5,6,7,8,9,10]
     validationAcc = np.zeros(len(maxdepths))
     testAcc = np.zeros(len(maxdepths))
+
     numFolds = 10
     
     #Finding the best hyperparams and calculating error of trees using cross validation
     index = 0
+    
     for depth in maxdepths:
         clf = tree.DecisionTreeClassifier(max_depth = depth, random_state = 1)
         scores = cross_val_score(clf, X_train, Y_train, cv= numFolds)
@@ -65,58 +65,46 @@ for i, news_outlet in enumerate(sentiment_data):
         index += 1
         
     best_test_accuracies.append(testAcc[bestHyperparam])
-    
-    
-    
+
+
+    params = [0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+    logistic_acc = np.zeros(len(params))
+    coef_log = []
+    index = 0
     #linear regression classifier
-    clf = linear_model.LogisticRegression(C=10, random_state=1)
-    clf.fit(X_train, Y_train)
-    Y_pred = clf.predict(X_test)
-    logistic_acc = accuracy_score(Y_test, Y_pred)
-    
-    
-    
-    
-    
-    
+    for value in params:
+        clf = linear_model.LogisticRegression(C=value, random_state=1)
+        
+        clf.fit(X_train, Y_train)
+        Y_pred = clf.predict(X_test)
+        
+        logistic_acc[index] = (accuracy_score(Y_test, Y_pred))
+     #   print("param : " , value , clf.coef_)
+        coef_log.append(clf.coef_)
+        best_log_param = np.argmax(logistic_acc)
+
+        index += 1
+    best_coef_logs = coef_log[best_log_param]
+
     #neural network classifier
     clf = neural_network.MLPClassifier(hidden_layer_sizes=(4,), activation='logistic', 
                                   max_iter=2000, random_state=1 , early_stopping=True)
     clf = clf.fit(X_train, Y_train.ravel())
     Y_pred = clf.predict(X_test)
     nn_acc = accuracy_score(Y_test, Y_pred)
+      
+
     
-    
-    
-    
-    
-    #Compare accuracy of best depth decision tree and log regression
+    #Compare accuracy of prediction models
     methods = ['Dtree', 'LogRegression', 'Neural Network']
-    acc = [testAcc[bestHyperparam], logistic_acc, nn_acc]
+    acc = [testAcc[bestHyperparam], logistic_acc[best_log_param], nn_acc]
     plt.title(f'Decision Tree vs Logistic Regression vs NN for {data_order[i]}')
     plt.bar([1.5,2.5, 3.5],acc)
     plt.xticks([1.5,2.5, 3.5], methods)
     plt.ylabel('Test accuracy')
     plt.ylim([0.0,1])
     plt.show()
-    print(f"Best classification method for {data_order[i]}: {methods[acc.index(max(acc))]}")
-     
-    """
-    #results of decision trees
+    print(f"The Best classification method for {data_order[i]} is {methods[acc.index(max(acc))]} with accuracy : {round(acc[acc.index(max(acc))] , 3)}")
+    print(f"Best Hyperparams DTree : {maxdepths[bestHyperparam]}  LogReg : {params[best_log_param]} ")
+    print("Log coefficients : " , best_coef_logs)
     
-    
-    plt.plot(maxdepths, validationAcc, 'ro--', maxdepths, testAcc, 'kv-', maxdepths)
-    plt.xlabel('Maximum depth')
-    plt.ylabel('Accuracy')
-    plt.title(f'{data_order[i]}')
-    plt.legend(['Validation','Testing'])
-    plt.ylim([0.1,0.65])
-    plt.show()
-   
-    
-    print(f"Test accuracy for {data_order[i]}: {testAcc[bestHyperparam]}" )
-    print(f"Best hyperparameter for {data_order[i]} , MaxDepth = {maxdepths[bestHyperparam]}")
-print()
-print(f"Average Test Accuracy for all trees: {sum(best_test_accuracies) / len(best_test_accuracies) }")
-    
- """
